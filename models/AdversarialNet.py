@@ -3,6 +3,7 @@ import numpy as np
 
 
 def calc_coeff(iter_num, high=1.0, low=0.0, alpha=10.0, max_iter=10000.0):
+    '''渐进式训练: 权重系数从0-1变化'''
     return np.float(2.0 * (high - low) / (1.0 + np.exp(-alpha * iter_num / max_iter)) - (high - low) + low)
 
 
@@ -11,8 +12,9 @@ def grl_hook(coeff):
         return -coeff * grad.clone()
     return fun1
 
+
 class AdversarialNet(nn.Module):
-    def __init__(self, in_feature, hidden_size,max_iter=10000.0, trade_off_adversarial='Step', lam_adversarial=1.0):
+    def __init__(self, in_feature, hidden_size, max_iter=10000.0, trade_off_adversarial='Step', lam_adversarial=1.0):
         super(AdversarialNet, self).__init__()
         self.ad_layer1 = nn.Sequential(
             nn.Linear(in_feature, hidden_size),
@@ -42,7 +44,8 @@ class AdversarialNet(nn.Module):
         if self.trade_off_adversarial == 'Cons':
             coeff = self.lam_adversarial
         elif self.trade_off_adversarial == 'Step':
-            coeff = calc_coeff(self.iter_num, self.high, self.low, self.alpha, self.max_iter)
+            coeff = calc_coeff(self.iter_num, self.high,
+                               self.low, self.alpha, self.max_iter)
         else:
             raise Exception("loss not implement")
         x = x * 1.0

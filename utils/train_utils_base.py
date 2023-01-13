@@ -1,27 +1,24 @@
-#!/usr/bin/python
-# -*- coding:utf-8 -*-
-
 import logging
 import os
 import time
 import warnings
-
 import torch
 from torch import nn
 from torch import optim
 import numpy as np
-
 import models
 import datasets
+
 
 def apply_dropout(m):
     if type(m) == nn.Dropout:
         m.eval()
+
+
 class train_utils(object):
     def __init__(self, args, save_dir):
         self.args = args
         self.save_dir = save_dir
-
 
     def setup(self):
         """
@@ -46,33 +43,32 @@ class train_utils(object):
         # Load the datasets
         Dataset = getattr(datasets, args.data_name)
         self.datasets = {}
-
-
         if isinstance(args.transfer_task[0], str):
-           #print( args.transfer_task)
-           args.transfer_task = eval("".join(args.transfer_task))
-
-
-        self.datasets['source_train'], self.datasets['source_val'], self.datasets['target_val'] = Dataset(args.data_dir, args.transfer_task, args.normlizetype).data_split(transfer_learning=False)
+            #print( args.transfer_task)
+            args.transfer_task = eval("".join(args.transfer_task))
+        self.datasets['source_train'], self.datasets['source_val'], self.datasets['target_val'] = Dataset(
+            args.data_dir, args.transfer_task, args.normlizetype).data_split(transfer_learning=False)
         self.dataloaders = {x: torch.utils.data.DataLoader(self.datasets[x], batch_size=args.batch_size,
-                                                           shuffle=(True if x.split('_')[1] == 'train' else False),
+                                                           shuffle=(True if x.split('_')[
+                                                                    1] == 'train' else False),
                                                            num_workers=args.num_workers,
                                                            pin_memory=(True if self.device == 'cuda' else False))
                             for x in ['source_train', 'source_val', 'target_val']}
 
         # Define the model
         self.model = getattr(models, args.model_name)(args.pretrained)
-        self.model.fc = torch.nn.Linear(self.model.fc.in_features, Dataset.num_classes)
+        self.model.fc = torch.nn.Linear(
+            self.model.fc.in_features, Dataset.num_classes)
 
         if args.adabn:
             self.model_eval = getattr(models, args.model_name)(args.pretrained)
-            self.model_eval.fc = torch.nn.Linear(self.model_eval.fc.in_features, Dataset.num_classes)
+            self.model_eval.fc = torch.nn.Linear(
+                self.model_eval.fc.in_features, Dataset.num_classes)
 
         if self.device_count > 1:
             self.model = torch.nn.DataParallel(self.model)
             if args.adabn:
                 self.model_eval = torch.nn.DataParallel(self.model_eval)
-
 
         # Define the optimizer
         if args.opt == 'sgd':
@@ -87,14 +83,18 @@ class train_utils(object):
         # Define the learning rate decay
         if args.lr_scheduler == 'step':
             steps = [int(step) for step in args.steps.split(',')]
-            self.lr_scheduler = optim.lr_scheduler.MultiStepLR(self.optimizer, steps, gamma=args.gamma)
+            self.lr_scheduler = optim.lr_scheduler.MultiStepLR(
+                self.optimizer, steps, gamma=args.gamma)
         elif args.lr_scheduler == 'exp':
-            self.lr_scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, args.gamma)
+            self.lr_scheduler = optim.lr_scheduler.ExponentialLR(
+                self.optimizer, args.gamma)
         elif args.lr_scheduler == 'stepLR':
             steps = int(args.steps)
-            self.lr_scheduler = optim.lr_scheduler.StepLR(self.optimizer, steps, args.gamma)
+            self.lr_scheduler = optim.lr_scheduler.StepLR(
+                self.optimizer, steps, args.gamma)
         elif args.lr_scheduler == 'cos':
-            self.lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer, 20, 0)
+            self.lr_scheduler = optim.lr_scheduler.CosineAnnealingLR(
+                self.optimizer, 20, 0)
         elif args.lr_scheduler == 'fix':
             self.lr_scheduler = None
         else:
@@ -107,7 +107,6 @@ class train_utils(object):
         if args.adabn:
             self.model_eval.to(self.device)
         self.criterion = nn.CrossEntropyLoss()
-
 
     def train(self):
         """
@@ -123,17 +122,18 @@ class train_utils(object):
         batch_acc = 0
         step_start = time.time()
 
-
         for epoch in range(self.start_epoch, args.max_epoch):
 
-            logging.info('-'*5 + 'Epoch {}/{}'.format(epoch, args.max_epoch - 1) + '-'*5)
+            logging.info('-'*5 + 'Epoch {}/{}'.format(epoch,
+                         args.max_epoch - 1) + '-'*5)
+
             # Update the learning rate
             if self.lr_scheduler is not None:
                 # self.lr_scheduler.step(epoch)
-                logging.info('current lr: {}'.format(self.lr_scheduler.get_lr()))
+                logging.info('current lr: {}'.format(
+                    self.lr_scheduler.get_lr()))
             else:
                 logging.info('current lr: {}'.format(args.lr))
-
 
             # Each epoch has a training and val phase
             for phase in ['source_train', 'source_val', 'target_val']:
@@ -144,19 +144,22 @@ class train_utils(object):
 
                 # Set model to train mode or test mode
                 if phase != 'target_val':
-                    if phase=='source_train':
-                       self.model.train()
-                    if phase=='source_val':
-                       self.model.eval()
+                    if phase == 'source_train':
+                        self.model.train()
+                    if phase == 'source_val':
+                        self.model.eval()
                 else:
                     if args.adabn:
+                        # --------------- adabn 实现 ---------------
                         torch.save(self.model.module.state_dict() if self.device_count > 1 else self.model.state_dict(),
                                    os.path.join(self.save_dir, 'model_temp.pth'))
-                        self.model_eval.load_state_dict(torch.load(os.path.join(self.save_dir, 'model_temp.pth')))
-                        self.model_eval.train()
+                        self.model_eval.load_state_dict(torch.load(
+                            os.path.join(self.save_dir, 'model_temp.pth')))
+                        self.model_eval.train()  # 设置为 train 模式
                         self.model_eval.apply(apply_dropout)
-                        with torch.set_grad_enabled(False):
 
+                        # 不反向更新(固定网络参数只更新BN的mean和var)
+                        with torch.set_grad_enabled(False):
                             for i in range(args.adabn_epochs):
                                 if args.eval_all:
                                     for batch_idx, (inputs, _) in enumerate(self.dataloaders['target_val']):
@@ -165,18 +168,16 @@ class train_utils(object):
                                         else:
                                             inputs_all = torch.cat((inputs_all, inputs), dim=0)
                                     inputs_all = inputs_all.to(self.device)
-                                    _ = self.model_eval(inputs_all)
+                                    _ = self.model_eval(inputs_all)  # 只做前向(使用所有数据)
                                 else:
-                                    for i in range(args.adabn_epochs):
-                                        for batch_idx, (inputs, _) in enumerate(self.dataloaders['target_val']):
-                                            inputs = inputs.to(self.device)
-                                            _ = self.model_eval(inputs)
+                                    # for i in range(args.adabn_epochs):
+                                    for batch_idx, (inputs, _) in enumerate(self.dataloaders['target_val']):
+                                        inputs = inputs.to(self.device)
+                                        _ = self.model_eval(inputs)  # 只做前向(使用batch数据)
                         self.model_eval.eval()
+                        # ----------------------------------------
                     else:
                         self.model.eval()
-
-
-
 
                 for batch_idx, (inputs, labels) in enumerate(self.dataloaders[phase]):
                     inputs = inputs.to(self.device)
@@ -219,15 +220,15 @@ class train_utils(object):
                                 batch_time = train_time / args.print_step if step != 0 else train_time
                                 sample_per_sec = 1.0*batch_count/train_time
                                 logging.info('Epoch: {} [{}/{}], Train Loss: {:.4f} Train Acc: {:.4f},'
-                                             '{:.1f} examples/sec {:.2f} sec/batch'.format(
-                                    epoch, batch_idx*len(inputs), len(self.dataloaders[phase].dataset),
-                                    batch_loss, batch_acc, sample_per_sec, batch_time
-                                ))
+                                             '{:.1f} samples/sec {:.2f} sec/batch'.format(
+                                                 epoch, batch_idx * len(inputs),
+                                                 len(self.dataloaders[phase].dataset),
+                                                 batch_loss, batch_acc, sample_per_sec, batch_time
+                                             ))
                                 batch_acc = 0
                                 batch_loss = 0.0
                                 batch_count = 0
                             step += 1
-
 
                 # Print the train and val information via each epoch
                 epoch_loss = epoch_loss / len(self.dataloaders[phase].dataset)
@@ -236,7 +237,6 @@ class train_utils(object):
                     epoch, phase, epoch_loss, phase, epoch_acc, time.time() - epoch_start
                 ))
 
-
                 # save the model
                 if phase == 'target_val':
                     # save the checkpoint for other learning
@@ -244,26 +244,10 @@ class train_utils(object):
                     # save the best model according to the val accuracy
                     if epoch_acc > best_acc or epoch > args.max_epoch-2:
                         best_acc = epoch_acc
-                        logging.info("save best model epoch {}, acc {:.4f}".format(epoch, epoch_acc))
+                        logging.info(
+                            "save best model epoch {}, acc {:.4f}".format(epoch, epoch_acc))
                         torch.save(model_state_dic,
                                    os.path.join(self.save_dir, '{}-{:.4f}-best_model.pth'.format(epoch, best_acc)))
 
-
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

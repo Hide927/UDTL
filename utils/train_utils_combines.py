@@ -1,6 +1,3 @@
-#!/usr/bin/python
-# -*- coding:utf-8 -*-
-
 import logging
 import os
 import time
@@ -9,7 +6,6 @@ import math
 import torch
 from torch import nn
 from torch import optim
-
 import models
 import datasets
 from loss.DAN import DAN
@@ -18,6 +14,8 @@ from loss.CORAL import CORAL
 from utils.entropy_CDA import Entropy
 from utils.entropy_CDA import calc_coeff
 from utils.entropy_CDA import grl_hook
+
+
 class train_utils(object):
     def __init__(self, args, save_dir):
         self.args = args
@@ -43,16 +41,14 @@ class train_utils(object):
             self.device_count = 1
             logging.info('using {} cpu'.format(self.device_count))
 
-
         # Load the datasets
         Dataset = getattr(datasets, args.data_name)
         self.datasets = {}
         if isinstance(args.transfer_task[0], str):
-           #print(args.transfer_task)
-           args.transfer_task = eval("".join(args.transfer_task))
-        self.datasets['source_train'], self.datasets['source_val'], self.datasets['target_train'], self.datasets['target_val'] = Dataset(args.data_dir, args.transfer_task, args.normlizetype).data_split(transfer_learning=True)
-
-
+            # print(args.transfer_task)
+            args.transfer_task = eval("".join(args.transfer_task))
+        self.datasets['source_train'], self.datasets['source_val'], self.datasets['target_train'], self.datasets['target_val'] = Dataset(
+            args.data_dir, args.transfer_task, args.normlizetype).data_split(transfer_learning=True)
         self.dataloaders = {x: torch.utils.data.DataLoader(self.datasets[x], batch_size=args.batch_size,
                                                            shuffle=(True if x.split('_')[1] == 'train' else False),
                                                            num_workers=args.num_workers,
@@ -62,6 +58,7 @@ class train_utils(object):
 
         # Define the model
         self.model = getattr(models, args.model_name)(args.pretrained)
+
         if args.bottleneck:
             self.bottleneck_layer = nn.Sequential(nn.Linear(self.model.output_num(), args.bottleneck_num),
                                                   nn.ReLU(inplace=True), nn.Dropout())
@@ -100,7 +97,6 @@ class train_utils(object):
                                                                             lam_adversarial=args.lam_adversarial
                                                                             )
 
-
         if self.device_count > 1:
             self.model = torch.nn.DataParallel(self.model)
             if args.bottleneck:
@@ -129,7 +125,6 @@ class train_utils(object):
                 parameter_list = [{"params": self.model.parameters(), "lr": args.lr},
                                   {"params": self.classifier_layer.parameters(), "lr": args.lr}]
 
-
         # Define the optimizer
         if args.opt == 'sgd':
             self.optimizer = optim.SGD(parameter_list, lr=args.lr,
@@ -139,7 +134,6 @@ class train_utils(object):
                                         weight_decay=args.weight_decay)
         else:
             raise Exception("optimizer not implement")
-
 
         # Define the learning rate decay
         if args.lr_scheduler == 'step':
@@ -155,9 +149,7 @@ class train_utils(object):
         else:
             raise Exception("lr schedule not implement")
 
-
         self.start_epoch = 0
-
 
         # Invert the model and define the loss
         self.model.to(self.device)
@@ -167,13 +159,12 @@ class train_utils(object):
             self.AdversarialNet.to(self.device)
         self.classifier_layer.to(self.device)
 
-
         # Define the distance loss
         if args.distance_metric:
             if args.distance_loss == 'MK-MMD':
                 self.distance_loss = DAN
             elif args.distance_loss == "JMMD":
-                ## add additional network for some methods
+                # add additional network for some methods
                 self.softmax_layer = nn.Softmax(dim=1)
                 self.softmax_layer = self.softmax_layer.to(self.device)
                 self.distance_loss = JAN
@@ -189,7 +180,7 @@ class train_utils(object):
             if args.adversarial_loss == 'DA':
                 self.adversarial_loss = nn.BCELoss()
             elif args.adversarial_loss == "CDA" or args.adversarial_loss == "CDA+E":
-                ## add additional network for some methods
+                # add additional network for some methods
                 self.softmax_layer_ad = nn.Softmax(dim=1)
                 self.softmax_layer_ad = self.softmax_layer_ad.to(self.device)
                 self.adversarial_loss = nn.BCELoss()
@@ -199,7 +190,6 @@ class train_utils(object):
             self.adversarial_loss = None
 
         self.criterion = nn.CrossEntropyLoss()
-
 
     def train(self):
         """
@@ -216,19 +206,25 @@ class train_utils(object):
         step_start = time.time()
 
         iter_num = 0
+
         for epoch in range(self.start_epoch, args.max_epoch):
+
             logging.info('-'*5 + 'Epoch {}/{}'.format(epoch, args.max_epoch - 1) + '-'*5)
+
             # Update the learning rate
             if self.lr_scheduler is not None:
                 # self.lr_scheduler.step(epoch)
-                logging.info('current lr: {}'.format(self.lr_scheduler.get_lr()))
+                logging.info('current lr: {}'.format(
+                    self.lr_scheduler.get_lr()))
             else:
                 logging.info('current lr: {}'.format(args.lr))
 
             iter_target = iter(self.dataloaders['target_train'])
             len_target_loader = len(self.dataloaders['target_train'])
+
             # Each epoch has a training and val phase
             for phase in ['source_train', 'source_val', 'target_val']:
+
                 # Define the temp variable
                 epoch_start = time.time()
                 epoch_acc = 0
@@ -257,7 +253,7 @@ class train_utils(object):
                         labels = labels.to(self.device)
                     else:
                         source_inputs = inputs
-                        target_inputs, _ = iter_target.next()
+                        target_inputs, _ = next(iter_target)
                         inputs = torch.cat((source_inputs, target_inputs), dim=0)
                         inputs = inputs.to(self.device)
                         labels = labels.to(self.device)
@@ -265,24 +261,28 @@ class train_utils(object):
                         iter_target = iter(self.dataloaders['target_train'])
 
                     with torch.set_grad_enabled(phase == 'source_train'):
+
                         # forward
                         features = self.model(inputs)
                         if args.bottleneck:
                             features = self.bottleneck_layer(features)
-                        outputs = self.classifier_layer(features)
+                        outputs = self.classifier_layer(features)  # 线性输出
+
                         if phase != 'source_train' or epoch < args.middle_epoch:
                             logits = outputs
                             loss = self.criterion(logits, labels)
                         else:
-                            logits = outputs.narrow(0, 0, labels.size(0))
+                            # --------------- 迁移学习阶段 ---------------
+                            logits = outputs.narrow(0, 0, labels.size(0))  # 此时源域目标域数据拼在一起，取前一半(即源域数据)
                             classifier_loss = self.criterion(logits, labels)
+
                             # Calculate the distance metric
                             if self.distance_loss is not None:
                                 if args.distance_loss == 'MK-MMD':
                                     distance_loss = self.distance_loss(features.narrow(0, 0, labels.size(0)),
                                                                        features.narrow(0, labels.size(0), inputs.size(0)-labels.size(0)))
                                 elif args.distance_loss == 'JMMD':
-                                    softmax_out = self.softmax_layer(outputs)
+                                    softmax_out = self.softmax_layer(outputs)  # softmax输出
                                     distance_loss = self.distance_loss([features.narrow(0, 0, labels.size(0)),
                                                                         softmax_out.narrow(0, 0, labels.size(0))],
                                                                        [features.narrow(0, labels.size(0),
@@ -295,24 +295,21 @@ class train_utils(object):
                                                                        outputs.narrow(0, labels.size(0), inputs.size(0)-labels.size(0)))
                                 else:
                                     raise Exception("loss not implement")
-
                             else:
                                 distance_loss = 0
 
-
                             # Calculate the domain adversarial
                             if self.adversarial_loss is not None:
-                                if args.adversarial_loss == 'DA':
+                                if args.adversarial_loss == 'DA':  # 特征直接进入判别网络
                                     domain_label_source = torch.ones(labels.size(0)).float()
                                     domain_label_target = torch.zeros(inputs.size(0)-labels.size(0)).float()
                                     adversarial_label = torch.cat((domain_label_source, domain_label_target), dim=0).to(self.device)
                                     adversarial_out = self.AdversarialNet(features)
                                     adversarial_loss = self.adversarial_loss(adversarial_out.squeeze(), adversarial_label)
-                                elif args.adversarial_loss == 'CDA':
+                                elif args.adversarial_loss == 'CDA':  # softmax输出 * 特征再进入判别网络
                                     softmax_out = self.softmax_layer_ad(outputs).detach()
-                                    op_out = torch.bmm(softmax_out.unsqueeze(2), features.unsqueeze(1))
-                                    adversarial_out = self.AdversarialNet(op_out.view(-1, softmax_out.size(1) * features.size(1)))
-
+                                    op_out = torch.bmm(softmax_out.unsqueeze(2), features.unsqueeze(1))  # softmax输出 * 特征
+                                    adversarial_out = self.AdversarialNet(op_out.view(-1, softmax_out.size(1) * features.size(1)))  # batch_size * (类别 * 特征)
                                     domain_label_source = torch.ones(labels.size(0)).float()
                                     domain_label_target = torch.zeros(inputs.size(0)-labels.size(0)).float()
                                     adversarial_label = torch.cat((domain_label_source, domain_label_target), dim=0).to(self.device)
@@ -325,23 +322,16 @@ class train_utils(object):
                                     entropy = 1.0 + torch.exp(-entropy)
                                     entropy_source = entropy.narrow(0, 0, labels.size(0))
                                     entropy_target = entropy.narrow(0, labels.size(0), inputs.size(0) - labels.size(0))
-
                                     softmax_out = softmax_out.detach()
                                     op_out = torch.bmm(softmax_out.unsqueeze(2), features.unsqueeze(1))
-                                    adversarial_out = self.AdversarialNet(
-                                        op_out.view(-1, softmax_out.size(1) * features.size(1)))
-                                    domain_label_source = torch.ones(labels.size(0)).float().to(
-                                        self.device)
-                                    domain_label_target = torch.zeros(inputs.size(0) - labels.size(0)).float().to(
-                                        self.device)
-                                    adversarial_label = torch.cat((domain_label_source, domain_label_target), dim=0).to(
-                                        self.device)
+                                    adversarial_out = self.AdversarialNet(op_out.view(-1, softmax_out.size(1) * features.size(1)))
+                                    domain_label_source = torch.ones(labels.size(0)).float().to(self.device)
+                                    domain_label_target = torch.zeros(inputs.size(0) - labels.size(0)).float().to(self.device)
+                                    adversarial_label = torch.cat((domain_label_source, domain_label_target), dim=0).to(self.device)
                                     weight = torch.cat((entropy_source / torch.sum(entropy_source).detach().item(),
                                                         entropy_target / torch.sum(entropy_target).detach().item()), dim=0)
-
                                     adversarial_loss = torch.sum(weight.view(-1, 1) * self.adversarial_loss(adversarial_out.squeeze(), adversarial_label)) / torch.sum(weight).detach().item()
                                     iter_num += 1
-
                                 else:
                                     raise Exception("loss not implement")
                             else:
@@ -366,7 +356,6 @@ class train_utils(object):
 
                             # loss = classifier_loss + lam_distance * distance_loss + lam_adversarial * adversarial_loss
                             loss = classifier_loss + lam_distance * distance_loss + adversarial_loss
-
 
                         pred = logits.argmax(dim=1)
                         correct = torch.eq(pred, labels).float().sum().item()
@@ -395,17 +384,17 @@ class train_utils(object):
                                 batch_time = train_time / args.print_step if step != 0 else train_time
                                 sample_per_sec = 1.0 * batch_count / train_time
                                 logging.info('Epoch: {} [{}/{}], Train Loss: {:.4f} Train Acc: {:.4f},'
-                                             '{:.1f} examples/sec {:.2f} sec/batch'.format(
-                                    epoch, batch_idx * len(labels), len(self.dataloaders[phase].dataset),
-                                    batch_loss, batch_acc, sample_per_sec, batch_time
-                                ))
+                                             '{:.1f} samples/sec {:.2f} sec/batch'.format(
+                                                 epoch, batch_idx * len(labels), 
+                                                 len(self.dataloaders[phase].dataset),
+                                                 batch_loss, batch_acc, sample_per_sec, batch_time
+                                             ))
                                 batch_acc = 0
                                 batch_loss = 0.0
                                 batch_count = 0
                             step += 1
 
                 # Print the train and val information via each epoch
-
                 epoch_loss = epoch_loss / epoch_length
                 epoch_acc = epoch_acc / epoch_length
 
@@ -423,20 +412,5 @@ class train_utils(object):
                         torch.save(model_state_dic,
                                    os.path.join(self.save_dir, '{}-{:.4f}-best_model.pth'.format(epoch, best_acc)))
 
-
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
