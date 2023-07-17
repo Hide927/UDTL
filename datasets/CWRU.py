@@ -28,10 +28,6 @@ label = [i for i in range(0, 10)]
 
 
 def get_files(root, N):
-    '''
-    This function is used to generate the final training set and test set.
-    root:The location of the data set
-    '''
     data = []
     lab = []
     for k in range(len(N)):
@@ -43,16 +39,10 @@ def get_files(root, N):
             data1, lab1 = data_load(path1, dataname[N[k]][n], label=label[n])
             data += data1
             lab += lab1
-
     return [data, lab]
 
 
 def data_load(filename, axisname, label):
-    '''
-    This function is mainly used to generate test data and training data.
-    filename:Data location
-    axisname:Select which channel's data,---->"_DE_time","_FE_time","_BA_time"
-    '''
     datanumber = axisname.split(".")
     if eval(datanumber[0]) < 100:
         realaxis = "X0" + datanumber[0] + axis[0]
@@ -67,7 +57,6 @@ def data_load(filename, axisname, label):
         lab.append(label)
         start += signal_size
         end += signal_size
-
     return data, lab
 
 
@@ -75,15 +64,15 @@ class CWRU(object):
     num_classes = 10
     inputchannel = 1
 
-    def __init__(self, data_dir, transfer_task, normlizetype="0-1"):
+    def __init__(self, data_dir, transfer_task, normalizetype="0-1"):
         self.data_dir = data_dir
         self.source_N = transfer_task[0]  # [S]
         self.target_N = transfer_task[1]  # [T]
-        self.normlizetype = normlizetype
+        self.normalizetype = normalizetype
         self.data_transforms = {
             'train': Compose([
                 Reshape(),
-                Normalize(self.normlizetype),
+                Normalize(self.normalizetype),
                 # RandomAddGaussian(),
                 # RandomScale(),
                 # RandomStretch(),
@@ -93,7 +82,7 @@ class CWRU(object):
             ]),
             'val': Compose([
                 Reshape(),
-                Normalize(self.normlizetype),
+                Normalize(self.normalizetype),
                 Retype(),
                 # Scale(1)
             ])

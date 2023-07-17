@@ -21,11 +21,11 @@ def parse_args():
     parser.add_argument('--data_name', type=str,
                         default='PHMFFT', help='the name of the data')
     parser.add_argument('--data_dir', type=str,
-                        default='D:\Data\PHM2009gearbox\PHM_Society_2009_Competition_Expanded_txt', help='the directory of the data')
+                        default='E:\Dataset\PHM09\PHM2009 Gearbox\PHM_Society_2009_Competition_Expanded_txt', help='the directory of the data')
     parser.add_argument('--transfer_task', type=list,
                         default=[[0], [3]], help='transfer learning tasks')
-    parser.add_argument('--normlizetype', type=str,
-                        default='mean-std', help='nomalization type')
+    parser.add_argument('--normalizetype', type=str,
+                        default='mean-std', help='normalization type')
 
     # training parameters
     parser.add_argument('--cuda_device', type=str,
@@ -43,8 +43,8 @@ def parse_args():
     parser.add_argument('--bottleneck', type=bool, default=True,
                         help='whether using the bottleneck layer')
     parser.add_argument('--bottleneck_num', type=int,
-                        default=256, help='whether using the bottleneck layer')
-    parser.add_argument('--last_batch', type=bool,
+                        default=256, help='size of the bottleneck layer')
+    parser.add_argument('--drop_last', type=bool,
                         default=False, help='whether using the last batch')
 
     # mapping-based 
@@ -63,7 +63,7 @@ def parse_args():
     parser.add_argument('--adversarial_loss', type=str, choices=[
                         'DA', 'CDA', 'CDA+E'], default='CDA+E', help='which adversarial loss you use')
     parser.add_argument('--hidden_size', type=int,
-                        default=1024, help='whether using the last batch')
+                        default=1024, help='')
     parser.add_argument('--trade_off_adversarial',
                         type=str, default='Step', help='')
     parser.add_argument('--lam_adversarial', type=float,
@@ -87,7 +87,7 @@ def parse_args():
 
     # save, load and display information
     parser.add_argument('--middle_epoch', type=int,
-                        default=50, help='max number of epoch')
+                        default=50, help='pretrained number of epoch')
     parser.add_argument('--max_epoch', type=int,
                         default=300, help='max number of epoch')
     parser.add_argument('--print_step', type=int, default=50,

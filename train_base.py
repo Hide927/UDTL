@@ -13,7 +13,7 @@ args = None
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Train')
+    parser = argparse.ArgumentParser(description='Train basis & adabn')
 
     # model and data parameters
     parser.add_argument('--model_name', type=str,
@@ -21,11 +21,11 @@ def parse_args():
     parser.add_argument('--data_name', type=str,
                         default='JNU', help='the name of the data')
     parser.add_argument('--data_dir', type=str,
-                        default='D:/Data\江南大学数据\数据', help='the directory of the data')
+                        default='E:\Dataset\JNU', help='the directory of the data')
     parser.add_argument('--transfer_task', type=list,
                         default=[[0], [1]], help='transfer learning tasks')
-    parser.add_argument('--normlizetype', type=str,
-                        default='mean-std', help='nomalization type')
+    parser.add_argument('--normalizetype', type=str,
+                        default='mean-std', help='normalization type')
 
     # adabn parameters
     parser.add_argument('--adabn', type=bool, default=True,
@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument('--eval_all', type=bool, default=False,
                         help='whether using all samples to update the results')
     parser.add_argument('--adabn_epochs', type=int, default=3,
-                        help='the number of training process')
+                        help='epoch for adabn')
 
     # training parameters
     parser.add_argument('--cuda_device', type=str,

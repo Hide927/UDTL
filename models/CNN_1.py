@@ -2,7 +2,7 @@ from torch import nn
 import warnings
 
 
-# ----------------------------inputsize >=28-------------------------------------------------------------------------
+# ----------------------------  inputsize >= 28  ----------------------------
 class CNN(nn.Module):
     def __init__(self, pretrained=False, in_channel=1, out_channel=10):
         super(CNN, self).__init__()
@@ -18,8 +18,8 @@ class CNN(nn.Module):
             nn.Conv1d(16, 32, kernel_size=3),  # 32 * 1008
             nn.BatchNorm1d(32),
             nn.ReLU(inplace=True),
-            nn.MaxPool1d(kernel_size=2, stride=2),
-        )  # 32 * 504
+            nn.MaxPool1d(kernel_size=2, stride=2),  # 32 * 504
+        )
 
         self.layer3 = nn.Sequential(
             nn.Conv1d(32, 64, kernel_size=3),  # 64 * 502

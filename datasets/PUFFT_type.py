@@ -20,10 +20,6 @@ WC = ["N15_M07_F10", "N09_M07_F10", "N15_M01_F10", "N15_M07_F04"]
 
 def get_files(root, N):
     work_condition = 0
-    '''
-    This function is used to generate the final training set and test set.
-    root:The location of the data set
-    '''
     data = []
     lab = []
     if N[0] == 0:
@@ -54,15 +50,10 @@ def get_files(root, N):
                     # print(data3)
                     data += data3
                     lab += lab3
-
     return [data, lab]
 
 
 def data_load(filename, name, label):
-    '''
-    This function is mainly used to generate test data and training data.
-    filename:Data location
-    '''
     fl = loadmat(filename)[name]
     fl = fl[0][0][2][0][6][2]  # Take out the data
     fl = fl.reshape(-1,)
@@ -79,7 +70,6 @@ def data_load(filename, name, label):
         lab.append(label)
         start += signal_size
         end += signal_size
-
     return data, lab
 
 
@@ -87,15 +77,15 @@ class PUFFT_type(object):
     num_classes = 3
     inputchannel = 1
 
-    def __init__(self, data_dir, transfer_task, normlizetype="0-1"):
+    def __init__(self, data_dir, transfer_task, normalizetype="0-1"):
         self.data_dir = data_dir
         self.source_N = transfer_task[0]
         self.target_N = transfer_task[1]
-        self.normlizetype = normlizetype
+        self.normalizetype = normalizetype
         self.data_transforms = {
             'train': Compose([
                 Reshape(),
-                Normalize(self.normlizetype),
+                Normalize(self.normalizetype),
                 # RandomAddGaussian(),
                 # RandomScale(),
                 # RandomStretch(),
@@ -105,7 +95,7 @@ class PUFFT_type(object):
             ]),
             'val': Compose([
                 Reshape(),
-                Normalize(self.normlizetype),
+                Normalize(self.normalizetype),
                 Retype(),
                 # Scale(1)
             ])

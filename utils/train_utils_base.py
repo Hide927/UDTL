@@ -44,10 +44,9 @@ class train_utils(object):
         Dataset = getattr(datasets, args.data_name)
         self.datasets = {}
         if isinstance(args.transfer_task[0], str):
-            #print( args.transfer_task)
             args.transfer_task = eval("".join(args.transfer_task))
         self.datasets['source_train'], self.datasets['source_val'], self.datasets['target_val'] = Dataset(
-            args.data_dir, args.transfer_task, args.normlizetype).data_split(transfer_learning=False)
+            args.data_dir, args.transfer_task, args.normalizetype).data_split(transfer_learning=False)
         self.dataloaders = {x: torch.utils.data.DataLoader(self.datasets[x], batch_size=args.batch_size,
                                                            shuffle=(True if x.split('_')[
                                                                     1] == 'train' else False),
@@ -115,7 +114,7 @@ class train_utils(object):
         """
         args = self.args
 
-        step = 0
+        step = 0  # 迭代更新次数
         best_acc = 0.0
         batch_count = 0
         batch_loss = 0.0
@@ -127,9 +126,8 @@ class train_utils(object):
             logging.info('-'*5 + 'Epoch {}/{}'.format(epoch,
                          args.max_epoch - 1) + '-'*5)
 
-            # Update the learning rate
+            # Print current learning rate
             if self.lr_scheduler is not None:
-                # self.lr_scheduler.step(epoch)
                 logging.info('current lr: {}'.format(
                     self.lr_scheduler.get_lr()))
             else:
@@ -158,7 +156,7 @@ class train_utils(object):
                         self.model_eval.train()  # 设置为 train 模式
                         self.model_eval.apply(apply_dropout)
 
-                        # 不反向更新(固定网络参数只更新BN的mean和var)
+                        # 不反向更新(固定网络参数只更新 BN 的 mean 和 var)
                         with torch.set_grad_enabled(False):
                             for i in range(args.adabn_epochs):
                                 if args.eval_all:
@@ -170,10 +168,9 @@ class train_utils(object):
                                     inputs_all = inputs_all.to(self.device)
                                     _ = self.model_eval(inputs_all)  # 只做前向(使用所有数据)
                                 else:
-                                    # for i in range(args.adabn_epochs):
                                     for batch_idx, (inputs, _) in enumerate(self.dataloaders['target_val']):
                                         inputs = inputs.to(self.device)
-                                        _ = self.model_eval(inputs)  # 只做前向(使用batch数据)
+                                        _ = self.model_eval(inputs)  # 只做前向(使用 batch 数据)
                         self.model_eval.eval()
                         # ----------------------------------------
                     else:
@@ -237,7 +234,7 @@ class train_utils(object):
                     epoch, phase, epoch_loss, phase, epoch_acc, time.time() - epoch_start
                 ))
 
-                # save the model
+                # Save the model
                 if phase == 'target_val':
                     # save the checkpoint for other learning
                     model_state_dic = self.model.module.state_dict() if self.device_count > 1 else self.model.state_dict()

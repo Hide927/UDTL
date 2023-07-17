@@ -27,14 +27,10 @@ WC = ["N15_M07_F10", "N09_M07_F10", "N15_M01_F10", "N15_M07_F04"]
 
 
 def get_files(root, N):
-    '''
-    This function is used to generate the final training set and test set.
-    root:The location of the data set
-    '''
     data = []
     lab = []
     for i in range(len(N)):
-        state = WC[N[i]]  # WC[0] can be changed to different working states
+        state = WC[N[i]]
         # for i in tqdm(range(len(HBdata))):
         #     for w1 in range(20):
         #         name1 = state+"_"+HBdata[i]+"_"+str(w1+1)
@@ -50,7 +46,6 @@ def get_files(root, N):
         #         data2,lab2 = data_load(path2,name=name2,label=label2[j])
         #         data += data2
         #         lab += lab2
-
         for k in tqdm(range(len(RDBdata))):
             for w3 in range(1):  # 只取了一次测量
                 name3 = state+"_"+RDBdata[k]+"_"+str(w3+1)
@@ -58,15 +53,10 @@ def get_files(root, N):
                 data3, lab3 = data_load(path3, name=name3, label=label3[k])
                 data += data3
                 lab += lab3
-
     return [data, lab]
 
 
 def data_load(filename, name, label):
-    '''
-    This function is mainly used to generate test data and training data.
-    filename:Data location
-    '''
     fl = loadmat(filename)[name]
     fl = fl[0][0][2][0][6][2]  # Take out the data
     fl = fl.reshape(-1, 1)
@@ -78,7 +68,6 @@ def data_load(filename, name, label):
         lab.append(label)
         start += signal_size
         end += signal_size
-
     return data, lab
 
 
@@ -86,15 +75,15 @@ class PU(object):
     num_classes = len(RDBdata)
     inputchannel = 1
 
-    def __init__(self, data_dir, transfer_task, normlizetype="0-1"):
+    def __init__(self, data_dir, transfer_task, normalizetype="0-1"):
         self.data_dir = data_dir
         self.source_N = transfer_task[0]
         self.target_N = transfer_task[1]
-        self.normlizetype = normlizetype
+        self.normalizetype = normalizetype
         self.data_transforms = {
             'train': Compose([
                 Reshape(),
-                Normalize(self.normlizetype),
+                Normalize(self.normalizetype),
                 # RandomAddGaussian(),
                 # RandomScale(),
                 # RandomStretch(),
@@ -104,7 +93,7 @@ class PU(object):
             ]),
             'val': Compose([
                 Reshape(),
-                Normalize(self.normlizetype),
+                Normalize(self.normalizetype),
                 Retype(),
                 # Scale(1)
             ])

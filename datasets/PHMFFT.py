@@ -26,14 +26,10 @@ WC = {0: "30hz"+"_"+"High"+"_1",
 
 
 def get_files(root, N):
-    '''
-    This function is used to generate the final training set and test set.
-    root:The location of the data set
-    '''
     data = []
     lab = []
     for k in range(len(N)):
-        state1 = WC[N[k]]  # WC[0] can be changed to different working states
+        state1 = WC[N[k]]
         for i in tqdm(range(len(Case1))):
             root1 = os.path.join("/tmp", root, Case1[i], Case1[i]+"_"+state1)
             datalist1 = os.listdir(root1)
@@ -41,15 +37,10 @@ def get_files(root, N):
             data1, lab1 = data_load(path1, label=label1[i])
             data += data1
             lab += lab1
-
     return [data, lab]
 
 
 def data_load(filename, label):
-    '''
-    This function is mainly used to generate test data and training data.
-    filename:Data location
-    '''
     fl = np.loadtxt(filename, usecols=0)
     fl = fl.reshape(-1,)  # 列表
     data = []
@@ -65,7 +56,6 @@ def data_load(filename, label):
         lab.append(label)
         start += signal_size
         end += signal_size
-
     return data, lab
 
 
@@ -73,15 +63,15 @@ class PHMFFT(object):
     num_classes = 6  # Case 1 have 6 labels; Case 2 have 8 lables
     inputchannel = 1
 
-    def __init__(self, data_dir, transfer_task, normlizetype="0-1"):
+    def __init__(self, data_dir, transfer_task, normalizetype="0-1"):
         self.data_dir = data_dir
         self.source_N = transfer_task[0]
         self.target_N = transfer_task[1]
-        self.normlizetype = normlizetype
+        self.normalizetype = normalizetype
         self.data_transforms = {
             'train': Compose([
                 Reshape(),
-                Normalize(self.normlizetype),
+                Normalize(self.normalizetype),
                 # RandomAddGaussian(),
                 # RandomScale(),
                 # RandomStretch(),
@@ -91,7 +81,7 @@ class PHMFFT(object):
             ]),
             'val': Compose([
                 Reshape(),
-                Normalize(self.normlizetype),
+                Normalize(self.normalizetype),
                 Retype(),
                 # Scale(1)
             ])
@@ -140,4 +130,5 @@ class PHMFFT(object):
                 {"data": list_data[0], "label": list_data[1]})
             target_val = dataset(
                 list_data=data_pd, transform=self.data_transforms['val'])
+            
             return source_train, source_val, target_val

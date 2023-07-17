@@ -16,10 +16,6 @@ label = [i for i in range(0, 4)]
 
 
 def get_files(root, N):
-    '''
-    This function is used to generate the final training set and test set.
-    root:The location of the data set
-    '''
     data = []
     lab = []
     for k in range(len(N)):
@@ -28,15 +24,10 @@ def get_files(root, N):
             data1, lab1 = data_load(path1, label=label[i])
             data += data1
             lab += lab1
-
     return [data, lab]
 
 
 def data_load(filename, label):
-    '''
-    This function is mainly used to generate test data and training data.
-    filename:Data location
-    '''
     fl = np.loadtxt(filename)
     data = []
     lab = []
@@ -51,7 +42,6 @@ def data_load(filename, label):
         lab.append(label)
         start += signal_size
         end += signal_size
-
     return data, lab
 
 
@@ -59,15 +49,15 @@ class JNUFFT(object):
     num_classes = 4
     inputchannel = 1
 
-    def __init__(self, data_dir, transfer_task, normlizetype="0-1"):
+    def __init__(self, data_dir, transfer_task, normalizetype="0-1"):
         self.data_dir = data_dir
         self.source_N = transfer_task[0]
         self.target_N = transfer_task[1]
-        self.normlizetype = normlizetype
+        self.normalizetype = normalizetype
         self.data_transforms = {
             'train': Compose([
                 Reshape(),
-                Normalize(self.normlizetype),
+                Normalize(self.normalizetype),
                 # RandomAddGaussian(),
                 # RandomScale(),
                 # RandomStretch(),
@@ -77,7 +67,7 @@ class JNUFFT(object):
             ]),
             'val': Compose([
                 Reshape(),
-                Normalize(self.normlizetype),
+                Normalize(self.normalizetype),
                 Retype(),
                 # Scale(1)
             ])
